@@ -28,7 +28,12 @@ func (d Dynamo) Register(p *prolog.Interpreter) {
 }
 
 func (d Dynamo) Bootstrap(p *prolog.Interpreter) {
-	if err := p.Exec(`:- op(501, xfx, -&-).`); err != nil {
+	if err := p.Exec(`
+		:- op(501, xfx, -&-).
+		:- built_in(list_tables/1).
+		:- built_in(scan/2).
+		:- built_in(get_item/3).
+	`); err != nil {
 		panic(err)
 	}
 }

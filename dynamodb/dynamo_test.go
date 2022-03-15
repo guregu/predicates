@@ -54,6 +54,5 @@ func TestScan(t *testing.T) {
 			t.Fatal(err)
 		}
 		fmt.Println(m)
-
 	}
 }

@@ -20,6 +20,11 @@ func NewFS(fsys fs.FS, i *prolog.Interpreter) FS {
 	}
 }
 
+func (ff FS) Register() {
+	ff.i.Exec(`:- built_in(consult/1).`)
+	ff.i.Register1("consult", ff.Consult)
+}
+
 // copied from ichiban/prolog and slightly modified
 
 // consult/1.
