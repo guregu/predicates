@@ -28,6 +28,12 @@ func TestBetween(t *testing.T) {
 	t.Run("ground number",
 		p.Expect(okay, "between(0,2,1), OK = true."))
 
-	t.Run("wrong order",
+	t.Run("lower number",
+		p.Expect(okay, "between(0,2,0), OK = true."))
+
+	t.Run("upper number",
+		p.Expect(okay, "between(0,2,2), OK = true."))
+
+	t.Run("lower > upper",
 		p.Expect(fail, "between(3,1,2)."))
 }
