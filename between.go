@@ -2,17 +2,15 @@ package predicates
 
 import (
 	"context"
-	"math"
 
 	"github.com/ichiban/prolog/engine"
 
 	"github.com/guregu/predicates/internal"
 )
 
-// Between (between/3) succeeds iff low <= value <= high.
-// If value is a variable, it is unified with successive integers from low to high.
-// between(+Low, +High, ?Value).
-// See: https://www.swi-prolog.org/pldoc/doc_for?object=between/3
+// Between (between/3) is true when lower, upper, and value are all integers, and lower <= value <= upper.
+// If value is a variable, it is unified with successive integers from lower to upper.
+// between(+Lower, +Upper, -Value).
 func Between(low, high, value engine.Term, k func(*engine.Env) *engine.Promise, env *engine.Env) *engine.Promise {
 	var lo, hi engine.Integer
 
@@ -30,20 +28,13 @@ func Between(low, high, value engine.Term, k func(*engine.Env) *engine.Promise, 
 		hi = h
 	case engine.Variable:
 		return engine.Error(engine.ErrInstantiation)
-	case engine.Atom:
-		switch h {
-		case "infinite", "inf":
-			hi = math.MaxInt64 // is this dumb?
-		default:
-			return engine.Error(internal.TypeErrorInteger(high))
-		}
 	default:
 		return engine.Error(internal.TypeErrorInteger(high))
 	}
 
-	switch x := env.Resolve(value).(type) {
+	switch value := env.Resolve(value).(type) {
 	case engine.Integer:
-		if x >= lo && x <= hi {
+		if value >= lo && value <= hi {
 			return k(env)
 		}
 		return engine.Bool(false)
