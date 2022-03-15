@@ -10,6 +10,5 @@ Native predicates for [ichiban/prolog](https://github.com/ichiban/prolog).
 
 ## License
 
-BSD 2-clause.
-
-Includes code from ichiban/prolog (MIT license), see its license in `internal/error.go`.
+BSD 2-clause. Includes code from ichiban/prolog (MIT license).
+See LICENSE.
