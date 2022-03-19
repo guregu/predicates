@@ -37,3 +37,15 @@ func TestBetween(t *testing.T) {
 	t.Run("lower > upper",
 		p.Expect(fail, "between(3,1,2)."))
 }
+
+func BenchmarkBetween(b *testing.B) {
+	p := internal.NewTestProlog()
+	p.Interpreter.Register3("between", Between)
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		sol, _ := p.Query("between(1,3,X).")
+		for sol.Next() {
+		}
+	}
+}

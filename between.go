@@ -8,9 +8,6 @@ import (
 	"github.com/guregu/predicates/internal"
 )
 
-// Between (between/3) is true when lower, upper, and value are all integers, and lower <= value <= upper.
-// If value is a variable, it is unified with successive integers from lower to upper.
-// between(+Lower, +Upper, -Value).
 func Between(lower, upper, value engine.Term, k func(*engine.Env) *engine.Promise, env *engine.Env) *engine.Promise {
 	var low, high engine.Integer
 
@@ -32,6 +29,10 @@ func Between(lower, upper, value engine.Term, k func(*engine.Env) *engine.Promis
 		return engine.Error(internal.TypeErrorInteger(upper))
 	}
 
+	if low > high {
+		return engine.Bool(false)
+	}
+
 	switch value := env.Resolve(value).(type) {
 	case engine.Integer:
 		if value >= low && value <= high {
@@ -40,18 +41,11 @@ func Between(lower, upper, value engine.Term, k func(*engine.Env) *engine.Promis
 		return engine.Bool(false)
 	case engine.Variable:
 		return engine.Delay(func(context.Context) *engine.Promise {
-			i := low - 1
-			return engine.Repeat(func(context.Context) *engine.Promise {
-				i++
-				switch {
-				case i-1 > i:
-					return engine.Error(internal.EvaluationErrorIntOverflow())
-				case i > high:
-					return engine.Bool(true)
-				}
-				return engine.Unify(value, i, k, env)
-			})
+			return engine.Unify(value, low, k, env)
+		}, func(context.Context) *engine.Promise {
+			return Between(low+1, upper, value, k, env)
 		})
+	default:
+		return engine.Error(internal.TypeErrorInteger(value))
 	}
-	return engine.Error(internal.TypeErrorInteger(value))
 }
