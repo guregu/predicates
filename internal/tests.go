@@ -13,6 +13,9 @@ func NewTestProlog() *TestProlog {
 	p := &TestProlog{
 		Interpreter: prolog.New(os.Stdin, os.Stdout),
 	}
+	if err := p.Exec(`:- set_prolog_flag(unknown, fail).`); err != nil {
+		panic(err)
+	}
 	return p
 }
 
@@ -51,6 +54,9 @@ func (p *TestProlog) Expect(want []map[string]engine.Term, query string, args ..
 			}
 			got = append(got, vars)
 			t.Log("solution:", vars)
+		}
+		if err := sol.Err(); err != nil {
+			t.Fatal(err)
 		}
 		if n != len(want) {
 			t.Log("want", len(want), "solutions but got", n)

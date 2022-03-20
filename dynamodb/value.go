@@ -2,12 +2,16 @@ package dynamodb
 
 import (
 	"encoding/base64"
+	"log"
 	"sort"
+	"strconv"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/guregu/predicates/internal"
 	"github.com/ichiban/prolog/engine"
+
+	"github.com/guregu/predicates/internal"
 )
 
 func av2prolog(av *dynamodb.AttributeValue) engine.Term {
@@ -51,7 +55,7 @@ func av2prolog(av *dynamodb.AttributeValue) engine.Term {
 		}
 		return engine.Atom("ns").Apply(engine.List(list...))
 	case av.NULL != nil:
-		return engine.Atom("null")
+		return engine.Atom("null").Apply(engine.Atom("true"))
 	case av.S != nil:
 		return engine.Atom("s").Apply(engine.Atom(*av.S))
 	case av.SS != nil:
@@ -139,10 +143,11 @@ func prolog2av(v engine.Term, env *engine.Env) (*dynamodb.AttributeValue, error)
 	case engine.Variable:
 		return nil, engine.ErrInstantiation
 	case engine.Atom:
-		if v == "null" {
-			return &dynamodb.AttributeValue{NULL: aws.Bool(true)}, nil
-		}
-		return nil, internal.TypeErrorCompound(v)
+		return &dynamodb.AttributeValue{S: aws.String(string(v))}, nil
+	case engine.Integer:
+		return &dynamodb.AttributeValue{N: aws.String(string(strconv.FormatInt(int64(v), 10)))}, nil
+	case engine.Float:
+		return &dynamodb.AttributeValue{N: aws.String(string(strconv.FormatFloat(float64(v), 'f', -1, 64)))}, nil
 	case *engine.Compound:
 		arg := env.Resolve(v.Args[0])
 		switch v.Functor {
@@ -171,9 +176,15 @@ func prolog2av(v engine.Term, env *engine.Env) (*dynamodb.AttributeValue, error)
 			}, env)
 			return av, err
 		case "bool":
-			// TODO: check for invalid values
 			if a, ok := arg.(engine.Atom); ok {
-				return &dynamodb.AttributeValue{BOOL: aws.Bool(a == "true")}, nil
+				switch a {
+				case "true":
+					return &dynamodb.AttributeValue{BOOL: aws.Bool(true)}, nil
+				case "false":
+					return &dynamodb.AttributeValue{BOOL: aws.Bool(false)}, nil
+				default:
+					return nil, engine.DomainError("boolean", a)
+				}
 			}
 			return nil, internal.TypeErrorAtom(arg)
 		case "l":
@@ -188,6 +199,7 @@ func prolog2av(v engine.Term, env *engine.Env) (*dynamodb.AttributeValue, error)
 			}, env)
 			return av, err
 		case "m":
+			return makemap(arg, env)
 			av := &dynamodb.AttributeValue{M: map[string]*dynamodb.AttributeValue{}}
 			err := engine.EachList(arg, func(elem engine.Term) error {
 				key, val, err := splitkey(env.Resolve(elem), env)
@@ -203,8 +215,13 @@ func prolog2av(v engine.Term, env *engine.Env) (*dynamodb.AttributeValue, error)
 			}, env)
 			return av, err
 		case "n":
-			if a, ok := arg.(engine.Atom); ok {
-				return &dynamodb.AttributeValue{N: aws.String(string(a))}, nil
+			switch x := arg.(type) {
+			case engine.Atom:
+				return &dynamodb.AttributeValue{N: aws.String(string(x))}, nil
+			case engine.Integer:
+				return &dynamodb.AttributeValue{N: aws.String(string(strconv.FormatInt(int64(x), 10)))}, nil
+			case engine.Float:
+				return &dynamodb.AttributeValue{N: aws.String(string(strconv.FormatFloat(float64(x), 'f', 64, 64)))}, nil
 			}
 			return nil, internal.TypeErrorAtom(arg)
 		case "ns":
@@ -218,7 +235,11 @@ func prolog2av(v engine.Term, env *engine.Env) (*dynamodb.AttributeValue, error)
 				return internal.TypeErrorAtom(elem)
 			}, env)
 			return av, err
-		// case "null"
+		case "null":
+			if a, ok := arg.(engine.Atom); ok && a == "true" {
+				return &dynamodb.AttributeValue{NULL: aws.Bool(true)}, nil
+			}
+			return nil, engine.DomainError("true", arg)
 		case "s":
 			if a, ok := arg.(engine.Atom); ok {
 				return &dynamodb.AttributeValue{S: aws.String(string(a))}, nil
@@ -235,9 +256,161 @@ func prolog2av(v engine.Term, env *engine.Env) (*dynamodb.AttributeValue, error)
 				return internal.TypeErrorAtom(elem)
 			}, env)
 			return av, err
+
+		case ".":
+			// prolog list
+			// try to figure out if it's a M like [foo-bar] or L like [foo]
+			// TODO: maybe this is dumb idk
+
+			isMap := true
+			engine.EachList(v, func(elem engine.Term) error {
+				if !isMap {
+					return nil
+				}
+				cmp, ok := env.Resolve(elem).(*engine.Compound)
+				if !ok {
+					isMap = false
+					return nil
+				}
+				if cmp.Functor != "-" || len(cmp.Args) != 2 {
+					log.Println(cmp.Functor, cmp.Args)
+					isMap = false
+				}
+				return nil
+			}, env)
+
+			if isMap {
+				return makemap(v, env)
+			}
+			return makelist(v, env)
+		default:
+			return nil, engine.DomainError("attribute_value", v)
 		}
 	}
 	return nil, internal.TypeErrorCompound(v)
+}
+
+func makemap(arg engine.Term, env *engine.Env) (*dynamodb.AttributeValue, error) {
+	av := &dynamodb.AttributeValue{M: map[string]*dynamodb.AttributeValue{}}
+	err := engine.EachList(arg, func(elem engine.Term) error {
+		key, val, err := splitkey(env.Resolve(elem), env)
+		if err != nil {
+			return err
+		}
+		avv, err := prolog2av(val, env)
+		if err != nil {
+			return err
+		}
+		av.M[key] = avv
+		return nil
+	}, env)
+	return av, err
+}
+
+func makelist(arg engine.Term, env *engine.Env) (*dynamodb.AttributeValue, error) {
+	av := &dynamodb.AttributeValue{L: []*dynamodb.AttributeValue{}}
+	err := engine.EachList(arg, func(elem engine.Term) error {
+		item, err := prolog2av(env.Resolve(elem), env)
+		if err != nil {
+			return err
+		}
+		av.L = append(av.L, item)
+		return nil
+	}, env)
+	return av, err
+}
+
+func simplify(v engine.Term, env *engine.Env) (engine.Term, error) {
+	switch v := env.Resolve(v).(type) {
+	case engine.Variable:
+		return nil, engine.ErrInstantiation
+	case engine.Atom:
+		return v, nil
+	case engine.Integer:
+		return v, nil
+	case engine.Float:
+		return v, nil
+	case *engine.Compound:
+		arg := env.Resolve(v.Args[0])
+		switch v.Functor {
+		case "l":
+			list := make([]engine.Term, 0)
+			err := engine.EachList(arg, func(elem engine.Term) error {
+				val, err := simplify(elem, env)
+				if err != nil {
+					return err
+				}
+				list = append(list, val)
+				return nil
+			}, env)
+			if err != nil {
+				return nil, err
+			}
+			return engine.List(list...), nil
+		case "m":
+			list := make([]engine.Term, 0)
+			err := engine.EachList(arg, func(elem engine.Term) error {
+				key, val, err := splitkey(env.Resolve(elem), env)
+				if err != nil {
+					return err
+				}
+				sv, err := simplify(val, env)
+				if err != nil {
+					return err
+				}
+				member := engine.Atom("-").Apply(engine.Atom(key), sv)
+				list = append(list, member)
+				return nil
+			}, env)
+			if err != nil {
+				return nil, err
+			}
+			return engine.List(list...), nil
+		case "n":
+			switch x := arg.(type) {
+			case engine.Atom:
+				// TODO: make this an option instead
+				if strings.ContainsRune(string(x), '.') {
+					f, err := strconv.ParseFloat(string(x), 64)
+					if err != nil {
+						return nil, err // TODO: wrap error?
+					}
+					return engine.Float(f), nil
+				}
+				n, err := strconv.ParseInt(string(x), 10, 64)
+				if err != nil {
+					return nil, err
+				}
+				return engine.Integer(n), nil
+			case engine.Integer:
+				return engine.Integer(x), nil
+			case engine.Float:
+				return engine.Float(x), nil
+			}
+			return nil, internal.TypeErrorAtom(arg)
+		case "s":
+			if a, ok := arg.(engine.Atom); ok {
+				return engine.Atom(a), nil
+			}
+			return nil, internal.TypeErrorAtom(arg)
+		default:
+			return v, nil
+		}
+	}
+	return nil, internal.TypeErrorCompound(v)
+}
+
+func list2item(list engine.Term, env *engine.Env) (map[string]*dynamodb.AttributeValue, error) {
+	avs := make(map[string]*dynamodb.AttributeValue)
+	err := engine.EachList(env.Resolve(list), func(elem engine.Term) error {
+		key, av, err := parsekey(env.Resolve(elem), env)
+		if err != nil {
+			return err
+		}
+		avs[key] = av
+		return nil
+	}, env)
+	return avs, err
 }
 
 func tableName(table engine.Term) (string, *engine.Exception) {

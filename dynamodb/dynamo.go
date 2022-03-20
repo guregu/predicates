@@ -25,6 +25,8 @@ func (d Dynamo) Register(p *prolog.Interpreter) {
 	p.Register1("list_tables", d.ListTables)
 	p.Register2("scan", d.Scan)
 	p.Register3("get_item", d.GetItem3)
+	p.Register2("put_item", d.PutItem)
+	p.Register2("attribute_value", d.AttributeValue)
 }
 
 func (d Dynamo) Bootstrap(p *prolog.Interpreter) {
@@ -33,6 +35,8 @@ func (d Dynamo) Bootstrap(p *prolog.Interpreter) {
 		:- built_in(list_tables/1).
 		:- built_in(scan/2).
 		:- built_in(get_item/3).
+		:- built_in(put_item/2).
+		:- built_in(attribute_value/2).
 	`); err != nil {
 		panic(err)
 	}
@@ -109,5 +113,50 @@ func (d Dynamo) GetItem3(table, keys, item engine.Term, k func(*engine.Env) *eng
 		}
 		it := item2prolog(result)
 		return engine.Unify(it, item, k, env)
+	})
+}
+
+func (d Dynamo) PutItem(table, item engine.Term, k func(*engine.Env) *engine.Promise, env *engine.Env) *engine.Promise {
+	tbl, ex := tableName(env.Resolve(table))
+	if ex != nil {
+		return engine.Error(ex)
+	}
+
+	it, err := list2item(env.Resolve(item), env)
+	if err != nil {
+		return engine.Error(err)
+	}
+
+	return engine.Delay(func(ctx context.Context) *engine.Promise {
+		if err := d.db.Table(tbl).Put(it).RunWithContext(ctx); err != nil {
+			return engine.Error(err)
+		}
+		return k(env)
+	})
+}
+
+func (d Dynamo) AttributeValue(attribute, value engine.Term, k func(*engine.Env) *engine.Promise, env *engine.Env) *engine.Promise {
+	switch attribute := env.Resolve(attribute).(type) {
+	case engine.Variable:
+		return engine.Delay(func(context.Context) *engine.Promise {
+			// TODO: better way?
+			av, err := prolog2av(env.Resolve(value), env)
+			if err != nil {
+				return engine.Error(err)
+			}
+			attr := av2prolog(av)
+			if err != nil {
+				return engine.Error(err)
+			}
+			return engine.Unify(attribute, attr, k, env)
+		})
+	}
+
+	return engine.Delay(func(context.Context) *engine.Promise {
+		v, err := simplify(attribute, env)
+		if err != nil {
+			return engine.Error(err)
+		}
+		return engine.Unify(env.Resolve(value), v, k, env)
 	})
 }
