@@ -188,32 +188,9 @@ func prolog2av(v engine.Term, env *engine.Env) (*dynamodb.AttributeValue, error)
 			}
 			return nil, internal.TypeErrorAtom(arg)
 		case "l":
-			av := &dynamodb.AttributeValue{L: []*dynamodb.AttributeValue{}}
-			err := engine.EachList(arg, func(elem engine.Term) error {
-				item, err := prolog2av(env.Resolve(elem), env)
-				if err != nil {
-					return err
-				}
-				av.L = append(av.L, item)
-				return nil
-			}, env)
-			return av, err
+			return makelist(arg, env)
 		case "m":
 			return makemap(arg, env)
-			av := &dynamodb.AttributeValue{M: map[string]*dynamodb.AttributeValue{}}
-			err := engine.EachList(arg, func(elem engine.Term) error {
-				key, val, err := splitkey(env.Resolve(elem), env)
-				if err != nil {
-					return err
-				}
-				av, err := prolog2av(val, env)
-				if err != nil {
-					return err
-				}
-				av.M[key] = av
-				return nil
-			}, env)
-			return av, err
 		case "n":
 			switch x := arg.(type) {
 			case engine.Atom:
