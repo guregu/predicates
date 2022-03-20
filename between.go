@@ -8,6 +8,10 @@ import (
 	"github.com/guregu/predicates/internal"
 )
 
+// Between (between/3) succeeds when lower, upper, and value are all integers, and lower <= value <= upper.
+// If value is a variable, it is unified with successive integers from lower to upper.
+//
+// 	between(+Lower, +Upper, -Value).
 func Between(lower, upper, value engine.Term, k func(*engine.Env) *engine.Promise, env *engine.Env) *engine.Promise {
 	var low, high engine.Integer
 
