@@ -5,8 +5,16 @@ Native predicates for [ichiban/prolog](https://github.com/ichiban/prolog).
 
 ## Implemented
 
-- `between/3`
-- `consult/1` using `io/fs.FS`
+Filesystem predicates using `io/fs.FS`
+
+- `consult/1`
+- `directory_files/2`
+- `directory_exists/1`
+- `file_exists/1`
+
+## Graduated
+
+- `between/3` made it into ichiban/prolog!
 
 ## License
 

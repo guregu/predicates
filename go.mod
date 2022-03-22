@@ -6,7 +6,7 @@ require (
 	github.com/aws/aws-sdk-go v1.42.47
 	github.com/google/go-cmp v0.5.7
 	github.com/guregu/dynamo v1.14.0
-	github.com/ichiban/prolog v0.8.1-0.20220321233827-0effc44aae01
+	github.com/ichiban/prolog v0.8.1-0.20220322105647-f2029460f9a5
 )
 
 require (

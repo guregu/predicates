@@ -13,7 +13,7 @@ func NewTestProlog() *TestProlog {
 	p := &TestProlog{
 		Interpreter: prolog.New(os.Stdin, os.Stdout),
 	}
-	if err := p.Exec(`:- set_prolog_flag(unknown, fail).`); err != nil {
+	if err := p.Exec(`:- set_prolog_flag(unknown, error).`); err != nil {
 		panic(err)
 	}
 	return p
@@ -67,3 +67,10 @@ func (p *TestProlog) Expect(want []map[string]engine.Term, query string, args ..
 		}
 	}
 }
+
+// predefined test results
+var (
+	TestTruth = []map[string]engine.Term{{}}
+	TestOK    = []map[string]engine.Term{{"OK": engine.Atom("true")}}
+	TestFail  = []map[string]engine.Term(nil)
+)
