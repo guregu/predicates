@@ -36,6 +36,7 @@ func (d Dynamo) Bootstrap(p *prolog.Interpreter) {
 		:- built_in(scan/2).
 		:- built_in(get_item/3).
 		:- built_in(put_item/2).
+		:- built_in(delete_item/2).
 		:- built_in(attribute_value/2).
 	`); err != nil {
 		panic(err)

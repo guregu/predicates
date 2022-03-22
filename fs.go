@@ -34,9 +34,13 @@ func (ff FS) Consult(files engine.Term, k func(*engine.Env) *engine.Promise, env
 		return engine.Error(engine.ErrInstantiation)
 	case *engine.Compound:
 		if f.Functor == "." && len(f.Args) == 2 {
-			if err := engine.EachList(f, func(elem engine.Term) error {
-				return ff.consultOne(elem, env)
-			}, env); err != nil {
+			iter := engine.ListIterator{List: f, Env: env}
+			for iter.Next() {
+				if err := ff.consultOne(iter.Current(), env); err != nil {
+					return engine.Error(err)
+				}
+			}
+			if err := iter.Err(); err != nil {
 				return engine.Error(err)
 			}
 			return k(env)

@@ -40,6 +40,7 @@ get_item(table, userid-n(42)-&-date-s('2022'), Item).
 ## TODO
 - [ ] `query/3`
 - [ ] `delete_item/2`
+- [ ] `update_item/?`
 - [ ] `describe_table/2`
 - [ ] options: conditions, filters, expressions (`query/4` etc.)
 - [ ] transactions
