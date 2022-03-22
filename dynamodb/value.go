@@ -245,7 +245,7 @@ func prolog2av(v engine.Term, env *engine.Env) (*dynamodb.AttributeValue, error)
 			// TODO: maybe this is dumb idk
 
 			isMap := true
-			iter := engine.ListIterator{List: arg, Env: env}
+			iter := engine.AnyIterator{Any: arg, Env: env}
 			for iter.Next() {
 				elem := iter.Current()
 				cmp, ok := env.Resolve(elem).(*engine.Compound)
