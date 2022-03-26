@@ -9,8 +9,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/ichiban/prolog/engine"
-
-	"github.com/guregu/predicates/internal"
 )
 
 func av2prolog(av *dynamodb.AttributeValue) engine.Term {
@@ -84,7 +82,7 @@ func splitkey(t engine.Term, env *engine.Env) (key string, value engine.Term, er
 		return "", nil, engine.ErrInstantiation
 	case *engine.Compound:
 		if t.Functor != "-" || len(t.Args) != 2 {
-			return "", nil, internal.TypeErrorPair(t)
+			return "", nil, engine.TypeErrorPair(t)
 		}
 
 		switch keyArg := env.Resolve(t.Args[0]).(type) {
@@ -93,12 +91,12 @@ func splitkey(t engine.Term, env *engine.Env) (key string, value engine.Term, er
 		case engine.Variable:
 			return "", nil, engine.ErrInstantiation
 		default:
-			return "", nil, internal.TypeErrorAtom(keyArg)
+			return "", nil, engine.TypeErrorAtom(keyArg)
 		}
 
 		return key, t.Args[1], nil
 	}
-	return "", nil, internal.TypeErrorPair(t)
+	return "", nil, engine.TypeErrorPair(t)
 }
 
 func splitkeys(t engine.Term, env *engine.Env) (pk, rk engine.Term, err error) {
@@ -120,9 +118,9 @@ func splitkeys(t engine.Term, env *engine.Env) (pk, rk engine.Term, err error) {
 		}
 
 		// TODO: better error
-		return nil, nil, internal.TypeErrorCompound(t)
+		return nil, nil, engine.TypeErrorCompound(t)
 	}
-	return nil, nil, internal.TypeErrorPair(t)
+	return nil, nil, engine.TypeErrorPair(t)
 }
 
 func parsekey(t engine.Term, env *engine.Env) (string, *dynamodb.AttributeValue, error) {
@@ -158,7 +156,7 @@ func prolog2av(v engine.Term, env *engine.Env) (*dynamodb.AttributeValue, error)
 				}
 				return &dynamodb.AttributeValue{B: b}, nil
 			}
-			return nil, internal.TypeErrorAtom(arg)
+			return nil, engine.TypeErrorAtom(arg)
 		case "bs":
 			av := &dynamodb.AttributeValue{BS: [][]byte{}}
 			iter := engine.ListIterator{List: arg, Env: env}
@@ -172,7 +170,7 @@ func prolog2av(v engine.Term, env *engine.Env) (*dynamodb.AttributeValue, error)
 					}
 					av.BS = append(av.BS, b)
 				default:
-					return nil, internal.TypeErrorAtom(elem)
+					return nil, engine.TypeErrorAtom(elem)
 				}
 			}
 			return av, iter.Err()
@@ -187,7 +185,7 @@ func prolog2av(v engine.Term, env *engine.Env) (*dynamodb.AttributeValue, error)
 					return nil, engine.DomainError("boolean", a)
 				}
 			}
-			return nil, internal.TypeErrorAtom(arg)
+			return nil, engine.TypeErrorAtom(arg)
 		case "l":
 			return makelist(arg, env)
 		case "m":
@@ -201,7 +199,7 @@ func prolog2av(v engine.Term, env *engine.Env) (*dynamodb.AttributeValue, error)
 			case engine.Float:
 				return &dynamodb.AttributeValue{N: aws.String(string(strconv.FormatFloat(float64(x), 'f', 64, 64)))}, nil
 			}
-			return nil, internal.TypeErrorAtom(arg)
+			return nil, engine.TypeErrorAtom(arg)
 		case "ns":
 			av := &dynamodb.AttributeValue{NS: []*string{}}
 			iter := engine.ListIterator{List: arg, Env: env}
@@ -211,7 +209,7 @@ func prolog2av(v engine.Term, env *engine.Env) (*dynamodb.AttributeValue, error)
 				case engine.Atom:
 					av.NS = append(av.NS, aws.String(string(elem)))
 				default:
-					return nil, internal.TypeErrorAtom(elem)
+					return nil, engine.TypeErrorAtom(elem)
 				}
 			}
 			return av, iter.Err()
@@ -224,7 +222,7 @@ func prolog2av(v engine.Term, env *engine.Env) (*dynamodb.AttributeValue, error)
 			if a, ok := arg.(engine.Atom); ok {
 				return &dynamodb.AttributeValue{S: aws.String(string(a))}, nil
 			}
-			return nil, internal.TypeErrorAtom(arg)
+			return nil, engine.TypeErrorAtom(arg)
 		case "ss":
 			av := &dynamodb.AttributeValue{SS: []*string{}}
 			iter := engine.ListIterator{List: arg, Env: env}
@@ -234,7 +232,7 @@ func prolog2av(v engine.Term, env *engine.Env) (*dynamodb.AttributeValue, error)
 				case engine.Atom:
 					av.SS = append(av.SS, aws.String(string(elem)))
 				default:
-					return nil, internal.TypeErrorAtom(elem)
+					return nil, engine.TypeErrorAtom(elem)
 				}
 			}
 			return av, iter.Err()
@@ -270,7 +268,7 @@ func prolog2av(v engine.Term, env *engine.Env) (*dynamodb.AttributeValue, error)
 			return nil, engine.DomainError("attribute_value", v)
 		}
 	}
-	return nil, internal.TypeErrorCompound(v)
+	return nil, engine.TypeErrorCompound(v)
 }
 
 func makemap(arg engine.Term, env *engine.Env) (*dynamodb.AttributeValue, error) {
@@ -368,17 +366,17 @@ func simplify(v engine.Term, env *engine.Env) (engine.Term, error) {
 			case engine.Float:
 				return engine.Float(x), nil
 			}
-			return nil, internal.TypeErrorAtom(arg)
+			return nil, engine.TypeErrorAtom(arg)
 		case "s":
 			if a, ok := arg.(engine.Atom); ok {
 				return engine.Atom(a), nil
 			}
-			return nil, internal.TypeErrorAtom(arg)
+			return nil, engine.TypeErrorAtom(arg)
 		default:
 			return v, nil
 		}
 	}
-	return nil, internal.TypeErrorCompound(v)
+	return nil, engine.TypeErrorCompound(v)
 }
 
 func list2item(list engine.Term, env *engine.Env) (map[string]*dynamodb.AttributeValue, error) {

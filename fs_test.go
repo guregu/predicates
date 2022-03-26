@@ -4,8 +4,10 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/guregu/predicates/internal"
 	"github.com/ichiban/prolog/engine"
+
+	"github.com/guregu/predicates/chars"
+	"github.com/guregu/predicates/internal"
 )
 
 func TestFS(t *testing.T) {
@@ -28,17 +30,17 @@ func TestFS(t *testing.T) {
 
 	t.Run("directory_files/2", func(t *testing.T) {
 		t.Run("files is variable", p.Expect([]map[string]engine.Term{
-			{"Files": engine.List(engine.Atom("dir/a.pl"), engine.Atom("dir/b.pl"), engine.Atom("dir/c"))},
-		}, `directory_files(dir, Files).`))
+			{"Files": chars.List("dir/a.pl", "dir/b.pl", "dir/c")},
+		}, `directory_files("dir", Files).`))
 	})
 
 	t.Run("file_exists/1", func(t *testing.T) {
-		t.Run("succeed", p.Expect(internal.TestOK, `file_exists('test.pl'), OK = true.`))
-		t.Run("fail", p.Expect(internal.TestOK, `\+file_exists('dir/c'), OK = true.`))
+		t.Run("succeed", p.Expect(internal.TestOK, `file_exists("test.pl"), OK = true.`))
+		t.Run("fail", p.Expect(internal.TestOK, `\+file_exists("dir/c"), OK = true.`))
 	})
 
 	t.Run("directory_exists/1", func(t *testing.T) {
-		t.Run("succeed", p.Expect(internal.TestOK, `directory_exists('dir/c'), OK = true.`))
-		t.Run("fail", p.Expect(internal.TestOK, `\+directory_exists('dir/a.pl'), OK = true.`))
+		t.Run("succeed", p.Expect(internal.TestOK, `directory_exists("dir/c"), OK = true.`))
+		t.Run("fail", p.Expect(internal.TestOK, `\+directory_exists("dir/a.pl"), OK = true.`))
 	})
 }

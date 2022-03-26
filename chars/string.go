@@ -8,7 +8,7 @@ import (
 	"github.com/ichiban/prolog/engine"
 )
 
-// Chars is a list of characters.
+// Chars is a list of characters in native Go representation.
 type Chars interface {
 	~string | ~[]rune
 }
