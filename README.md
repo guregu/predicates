@@ -20,6 +20,14 @@ These use strings (lists of characters) for filenames.
 - `directory_exists/1`
 - `file_exists/1`
 
+### Package [`taujson`](https://godoc.org/github.com/guregu/predicates/taujson)
+
+These predicates are intended to be compatible with Tau Prolog's [`library(js)`](http://tau-prolog.org/documentation#js).
+They are peculiar predicates that use opaque native objects for JSON conversion.
+
+- `json_atom/2`
+- `json_prolog/2`
+
 ### Graduated
 
 - [`between/3`](https://github.com/ichiban/prolog/releases/tag/v0.9.0) made it into ichiban/prolog in `v0.9.0`!
