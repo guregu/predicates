@@ -13,6 +13,7 @@ list_tables(-Table).
 scan(+Table, -Item).
 get_item(+Table, +Key, -Item).
 put_item(+Table, +Item).
+delete_item(+Table, +Key).
 
 % converting between DynamoDB attribute values (Attr) and friendly Prolog values (Value).
 attribute_value(+Attr, -Value).
@@ -39,7 +40,7 @@ get_item(table, userid-n(42)-&-date-s('2022'), Item).
 
 ## TODO
 - [ ] `query/3`
-- [ ] `delete_item/2`
+- [x] `delete_item/2`
 - [ ] `update_item/?`
 - [ ] `describe_table/2`
 - [ ] options: conditions, filters, expressions (`query/4` etc.)
