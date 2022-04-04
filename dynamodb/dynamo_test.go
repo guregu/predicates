@@ -81,6 +81,10 @@ func TestPut(t *testing.T) {
 	}
 }
 
+func TestQuery(t *testing.T) {
+
+}
+
 func TestAttributeValue(t *testing.T) {
 	p := internal.NewTestProlog()
 	ddb := New(newDB())

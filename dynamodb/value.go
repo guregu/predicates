@@ -9,6 +9,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/ichiban/prolog/engine"
+
+	"github.com/guregu/predicates/internal"
 )
 
 func av2prolog(av *dynamodb.AttributeValue) engine.Term {
@@ -99,15 +101,57 @@ func splitkey(t engine.Term, env *engine.Env) (key string, value engine.Term, er
 	return "", nil, engine.TypeErrorPair(t)
 }
 
+// type keys struct {
+// 	pk, sk      string
+// 	pv, sv, sv2 *dynamodb.AttributeValue
+// 	op          dynamo.Operator
+// }
+
+// func keyspec(table dynamo.Table, t engine.Term, env *engine.Env) (*dynamo.Query, error) {
+// 	switch t := env.Resolve(t).(type) {
+// 	case engine.Variable:
+// 		return nil, engine.ErrInstantiation
+// 	case *engine.Compound:
+// 		if t.Functor == "-" && len(t.Args) == 2 {
+// 			name, value, err := parsekey(t, env)
+// 			if err != nil {
+// 				return nil, err
+// 			}
+// 			q := table.Get(name, value)
+// 			return q, nil
+// 		}
+
+// 		switch {
+// 		case t.Functor == "-" && len(t.Args) == 2:
+// 			name, value, err := parsekey(t, env)
+// 			if err != nil {
+// 				return nil, err
+// 			}
+// 			q := table.Get(name, value)
+// 			return q, nil
+// 		case t.Functor == "-&-" && len(t.Args) == 2,
+// 			t.Functor == "key" && len(t.Args) == 2:
+// 			pk, pv, err := parsekey(t.Args[0], env)
+// 			if err != nil {
+// 				return nil, err
+// 			}
+// 			sk, sv, err := parsekey(t.Args[1], env)
+// 			if err != nil {
+// 				return nil, err
+// 			}
+// 		}
+
+// 		// TODO: better error
+// 		return nil, engine.TypeErrorCompound(t)
+// 	}
+// 	return nil, engine.TypeErrorPair(t)
+// }
+
 func splitkeys(t engine.Term, env *engine.Env) (pk, rk engine.Term, err error) {
 	switch t := env.Resolve(t).(type) {
 	case engine.Variable:
 		return nil, nil, engine.ErrInstantiation
 	case *engine.Compound:
-		if t.Functor == "-" && len(t.Args) == 2 {
-			return t, nil, nil
-		}
-
 		switch {
 		case t.Functor == "-" && len(t.Args) == 2:
 			return t, nil, nil
@@ -241,26 +285,7 @@ func prolog2av(v engine.Term, env *engine.Env) (*dynamodb.AttributeValue, error)
 			// prolog list
 			// try to figure out if it's a M like [foo-bar] or L like [foo]
 			// TODO: maybe this is dumb idk
-
-			isMap := true
-			iter := engine.AnyIterator{Any: arg, Env: env}
-			for iter.Next() {
-				elem := iter.Current()
-				cmp, ok := env.Resolve(elem).(*engine.Compound)
-				if !ok {
-					isMap = false
-					break
-				}
-				if cmp.Functor != "-" || len(cmp.Args) != 2 {
-					isMap = false
-					break
-				}
-			}
-			if err := iter.Err(); err != nil {
-				return nil, err
-			}
-
-			if isMap {
+			if internal.IsMap(arg, env) {
 				return makemap(v, env)
 			}
 			return makelist(v, env)
