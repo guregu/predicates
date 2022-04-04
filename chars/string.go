@@ -79,5 +79,5 @@ func Values[T Chars](list engine.Term, env *engine.Env) ([]T, error) {
 			return nil, engine.TypeErrorCharacter(list)
 		}
 	}
-	return vs, nil
+	return vs, iter.Err()
 }

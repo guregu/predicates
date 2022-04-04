@@ -52,6 +52,14 @@ func (p *TestProlog) Expect(want []map[string]engine.Term, query string, args ..
 			if err := sol.Scan(vars); err != nil {
 				t.Log("scan", err)
 			}
+
+			for k := range vars {
+				if k[0] == '_' {
+					// ignore _vars
+					delete(vars, k)
+				}
+			}
+
 			got = append(got, vars)
 			t.Log("solution:", vars)
 		}

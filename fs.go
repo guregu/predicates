@@ -28,7 +28,7 @@ func NewFS(fsys fs.FS, i *prolog.Interpreter) FS {
 }
 
 // Register is a convenience method that registers all FS predicates with their default names. This will replace the default consult/1.
-// To register these with custom names, use the interpreter's Register function and pass a method reference instead.
+// To register these with custom names, use the interpreter's Register functions and pass a method reference instead.
 func (ff FS) Register() {
 	ff.i.Exec(`
 		:- built_in(consult/1).
