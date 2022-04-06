@@ -71,8 +71,8 @@ func JSONAtom(js, atom engine.Term, k func(*engine.Env) *engine.Promise, env *en
 // JSONProlog (json_prolog/2) succeeds if JS is a native JSON object that represents List.
 // This is intended to be compatible with Tau Prolog's library(json).
 //
-//	json_atom(-JS, +List).
-//	json_atom(+JS, -List).
+//	json_prolog(-JS, +List).
+//	json_prolog(+JS, -List).
 func JSONProlog(js, value engine.Term, k func(*engine.Env) *engine.Promise, env *engine.Env) *engine.Promise {
 	var raw *Term
 	switch js := env.Resolve(js).(type) {

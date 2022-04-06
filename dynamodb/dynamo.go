@@ -29,7 +29,7 @@ func (d Dynamo) Register(p *prolog.Interpreter) {
 	p.Register1("list_tables", d.ListTables)
 	p.Register2("scan", d.Scan)
 	p.Register3("get_item", d.GetItem)
-	p.Register3("query", d.Query)
+	// p.Register3("query", d.Query)
 	p.Register2("put_item", d.PutItem)
 	p.Register2("delete_item", d.DeleteItem)
 	p.Register2("attribute_value", d.AttributeValue)
