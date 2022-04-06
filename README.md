@@ -5,7 +5,7 @@ Native predicates for [ichiban/prolog](https://github.com/ichiban/prolog).
 
 ## Prolog
 
-Filesystem predicates using [`io/fs.FS`](https://pkg.go.dev/io/fs). 
+Filesystem predicates use [`io/fs.FS`](https://pkg.go.dev/io/fs). 
 
 ### Built-in replacements
 
@@ -19,6 +19,10 @@ These use strings (lists of characters) for filenames.
 - `directory_files/2`
 - `directory_exists/1`
 - `file_exists/1`
+
+### Lists
+
+- `is_list/1`
 
 ### Package [`taujson`](https://godoc.org/github.com/guregu/predicates/taujson)
 
