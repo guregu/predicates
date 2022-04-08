@@ -23,6 +23,7 @@ These use strings (lists of characters) for filenames.
 ### Lists
 
 - `is_list/1`
+- `atomic_list_concat/3`
 
 ### Package [`taujson`](https://godoc.org/github.com/guregu/predicates/taujson)
 

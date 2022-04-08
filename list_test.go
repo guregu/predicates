@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/guregu/predicates/internal"
+	"github.com/ichiban/prolog/engine"
 )
 
 func TestIsList(t *testing.T) {
@@ -31,4 +32,48 @@ func TestIsList(t *testing.T) {
 
 	t.Run("term is variable", p.Expect(internal.TestFail,
 		`is_list(X), OK = true.`))
+}
+
+func TestAtomicListConcat(t *testing.T) {
+	p := internal.NewTestProlog()
+	p.Register3("atomic_list_concat", AtomicListConcat)
+
+	t.Run("list is ground", func(t *testing.T) {
+		t.Run("atom is variable", p.Expect([]map[string]engine.Term{
+			{"X": engine.Atom("a-b")},
+		}, `atomic_list_concat([a, b], '-', X).`))
+
+		t.Run("atom is variable and seperator is empty", p.Expect([]map[string]engine.Term{
+			{"X": engine.Atom("ab")},
+		}, `atomic_list_concat([a, b], '', X).`))
+
+		t.Run("atom is ground", p.Expect(internal.TestOK,
+			`atomic_list_concat([a, b], '/', 'a/b'), OK = true.`))
+
+		t.Run("list is empty and atom is variable", p.Expect([]map[string]engine.Term{
+			{"X": engine.Atom("")},
+		}, `atomic_list_concat([], '-', X).`))
+
+		t.Run("list is empty and atom is ground", p.Expect(internal.TestOK,
+			`atomic_list_concat([], '/', ''), OK = true.`))
+	})
+
+	t.Run("atom is ground", func(t *testing.T) {
+		t.Run("list is variable", p.Expect([]map[string]engine.Term{
+			{"X": engine.List(engine.Atom("a"), engine.Atom("b"), engine.Atom("c"))},
+		}, `atomic_list_concat(X, '-', 'a-b-c').`))
+
+		t.Run("list is variable and seperator is empty", p.Expect([]map[string]engine.Term{
+			{"X": engine.List(engine.Atom("a"), engine.Atom("b"), engine.Atom("c"))},
+		}, `atomic_list_concat(X, '', 'abc').`))
+
+		t.Run("atom is empty", p.Expect([]map[string]engine.Term{
+			{"X": engine.Atom("")},
+		}, `atomic_list_concat([], '-', X).`))
+
+		// seems like Tau and SWI both bind [''] instead of [] to the list here
+		t.Run("atom is empty and list is var", p.Expect([]map[string]engine.Term{
+			{"X": engine.List(engine.Atom(""))},
+		}, `atomic_list_concat(X, '/', '').`))
+	})
 }
