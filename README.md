@@ -25,6 +25,11 @@ These use strings (lists of characters) for filenames.
 - `is_list/1`
 - `atomic_list_concat/3`
 
+### Atoms
+
+- `downcase_atom/2`
+- `upcase_atom/2`
+
 ### Package [`taujson`](https://godoc.org/github.com/guregu/predicates/taujson)
 
 These predicates are intended to be compatible with Tau Prolog's [`library(js)`](http://tau-prolog.org/documentation#js).
