@@ -169,7 +169,7 @@ func prolog2json(t engine.Term, env *engine.Env) ([]byte, error) {
 	case *engine.Compound:
 		if internal.IsMap(t, env) {
 			m := make(map[string]json.RawMessage)
-			iter := engine.AnyIterator{Any: t, Env: env}
+			iter := engine.ListIterator{List: t, Env: env}
 			for iter.Next() {
 				cur := env.Resolve(iter.Current())
 				cmp := cur.(*engine.Compound)
@@ -185,20 +185,29 @@ func prolog2json(t engine.Term, env *engine.Env) ([]byte, error) {
 			}
 			return json.Marshal(m)
 		}
-		list := make([]json.RawMessage, 0)
-		iter := engine.AnyIterator{Any: t, Env: env}
-		for iter.Next() {
-			cur := env.Resolve(iter.Current())
-			v, err := prolog2json(cur, env)
-			if err != nil {
+
+		if t.Functor == "." && len(t.Args) == 2 {
+			list := make([]json.RawMessage, 0)
+			iter := engine.ListIterator{List: t, Env: env}
+			for iter.Next() {
+				cur := env.Resolve(iter.Current())
+				v, err := prolog2json(cur, env)
+				if err != nil {
+					return nil, err
+				}
+				list = append(list, json.RawMessage(v))
+			}
+			if err := iter.Err(); err != nil {
 				return nil, err
 			}
-			list = append(list, json.RawMessage(v))
+			return json.Marshal(list)
 		}
-		if err := iter.Err(); err != nil {
+
+		var sb strings.Builder
+		if err := engine.Write(&sb, t, env); err != nil {
 			return nil, err
 		}
-		return json.Marshal(list)
+		return json.Marshal(sb.String())
 	case *Term:
 		return []byte(*t), nil
 	}

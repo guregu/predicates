@@ -8,8 +8,7 @@ func IsMap(t engine.Term, env *engine.Env) bool {
 		return false
 	}
 
-	isMap := true
-	iter := engine.AnyIterator{Any: c, Env: env}
+	iter := engine.ListIterator{List: c, Env: env}
 	for iter.Next() {
 		elem := iter.Current()
 		cmp, ok := env.Resolve(elem).(*engine.Compound)
@@ -23,5 +22,5 @@ func IsMap(t engine.Term, env *engine.Env) bool {
 	if err := iter.Err(); err != nil {
 		return false
 	}
-	return isMap
+	return true
 }

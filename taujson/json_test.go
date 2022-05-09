@@ -28,6 +28,10 @@ func TestJSON(t *testing.T) {
 		t.Run("value is map of maps", p.Expect([]map[string]engine.Term{
 			{"JSON": engine.Atom(`{"a":{"b":{"c":{"d":{"e":555}}}}}`)},
 		}, `json_prolog(_JS, [a-[b-[c-[d-[e-555]]]]]), json_atom(_JS, JSON).`))
+
+		t.Run("value is non-map non-list compound", p.Expect([]map[string]engine.Term{
+			{"JSON": engine.Atom(`{"a":"b(c)"}`)},
+		}, `json_prolog(_JS, [a-b(c)]), json_atom(_JS, JSON).`))
 	})
 
 	t.Run("JSON → Prolog", func(t *testing.T) {
