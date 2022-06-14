@@ -14,11 +14,11 @@ func DowncaseAtom(atom, lowercase engine.Term, k func(*engine.Env) *engine.Promi
 	var a engine.Atom
 	switch atom := env.Resolve(atom).(type) {
 	case engine.Variable:
-		return engine.Error(engine.ErrInstantiation)
+		return engine.Error(engine.InstantiationError(env))
 	case engine.Atom:
 		a = atom
 	default:
-		return engine.Error(engine.TypeErrorAtom(atom))
+		return engine.Error(engine.TypeError(engine.ValidTypeAtom, atom, env))
 	}
 
 	switch low := env.Resolve(lowercase).(type) {
@@ -28,7 +28,7 @@ func DowncaseAtom(atom, lowercase engine.Term, k func(*engine.Env) *engine.Promi
 			return engine.Unify(low, transformed, k, env)
 		})
 	default:
-		return engine.Error(engine.TypeErrorAtom(low))
+		return engine.Error(engine.TypeError(engine.ValidTypeAtom, low, env))
 	}
 }
 
@@ -39,11 +39,11 @@ func UpcaseAtom(atom, uppercase engine.Term, k func(*engine.Env) *engine.Promise
 	var a engine.Atom
 	switch atom := env.Resolve(atom).(type) {
 	case engine.Variable:
-		return engine.Error(engine.ErrInstantiation)
+		return engine.Error(engine.InstantiationError(env))
 	case engine.Atom:
 		a = atom
 	default:
-		return engine.Error(engine.TypeErrorAtom(atom))
+		return engine.Error(engine.TypeError(engine.ValidTypeAtom, atom, env))
 	}
 
 	switch low := env.Resolve(uppercase).(type) {
@@ -53,6 +53,6 @@ func UpcaseAtom(atom, uppercase engine.Term, k func(*engine.Env) *engine.Promise
 			return engine.Unify(low, transformed, k, env)
 		})
 	default:
-		return engine.Error(engine.TypeErrorAtom(low))
+		return engine.Error(engine.TypeError(engine.ValidTypeAtom, low, env))
 	}
 }

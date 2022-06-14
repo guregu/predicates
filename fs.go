@@ -51,7 +51,7 @@ func (ff FS) DirectoryFiles(directory, files engine.Term, k func(*engine.Env) *e
 	var dir string
 	switch directory := env.Resolve(directory).(type) {
 	case engine.Variable:
-		return engine.Error(engine.ErrInstantiation)
+		return engine.Error(engine.InstantiationError(env))
 	case *engine.Compound:
 		var err error
 		dir, err = chars.Value[string](directory, env)
@@ -59,7 +59,7 @@ func (ff FS) DirectoryFiles(directory, files engine.Term, k func(*engine.Env) *e
 			return engine.Error(err)
 		}
 	default:
-		return engine.Error(engine.TypeErrorList(directory))
+		return engine.Error(engine.TypeError(engine.ValidTypeList, directory, env))
 	}
 
 	return engine.Delay(func(context.Context) *engine.Promise {
@@ -93,7 +93,7 @@ func (ff FS) DirectoryExists(directory engine.Term, k func(*engine.Env) *engine.
 	var dir string
 	switch directory := env.Resolve(directory).(type) {
 	case engine.Variable:
-		return engine.Error(engine.ErrInstantiation)
+		return engine.Error(engine.InstantiationError(env))
 	case *engine.Compound:
 		var err error
 		dir, err = chars.Value[string](directory, env)
@@ -101,7 +101,7 @@ func (ff FS) DirectoryExists(directory engine.Term, k func(*engine.Env) *engine.
 			return engine.Error(err)
 		}
 	default:
-		return engine.Error(engine.TypeErrorList(directory))
+		return engine.Error(engine.TypeError(engine.ValidTypeList, directory, env))
 	}
 
 	return engine.Delay(func(context.Context) *engine.Promise {
@@ -126,7 +126,7 @@ func (ff FS) FileExists(file engine.Term, k func(*engine.Env) *engine.Promise, e
 	var f string
 	switch file := env.Resolve(file).(type) {
 	case engine.Variable:
-		return engine.Error(engine.ErrInstantiation)
+		return engine.Error(engine.InstantiationError(env))
 	case *engine.Compound:
 		var err error
 		f, err = chars.Value[string](file, env)
@@ -134,7 +134,7 @@ func (ff FS) FileExists(file engine.Term, k func(*engine.Env) *engine.Promise, e
 			return engine.Error(err)
 		}
 	default:
-		return engine.Error(engine.TypeErrorList(file))
+		return engine.Error(engine.TypeError(engine.ValidTypeList, file, env))
 	}
 
 	return engine.Delay(func(context.Context) *engine.Promise {
@@ -161,7 +161,7 @@ func (ff FS) FileExists(file engine.Term, k func(*engine.Env) *engine.Promise, e
 func (ff FS) Consult(files engine.Term, k func(*engine.Env) *engine.Promise, env *engine.Env) *engine.Promise {
 	switch f := env.Resolve(files).(type) {
 	case engine.Variable:
-		return engine.Error(engine.ErrInstantiation)
+		return engine.Error(engine.InstantiationError(env))
 	case *engine.Compound:
 		if f.Functor == "." && len(f.Args) == 2 {
 			iter := engine.ListIterator{List: f, Env: env}
@@ -202,8 +202,8 @@ func (ff FS) consultOne(file engine.Term, env *engine.Env) error {
 
 			return nil
 		}
-		return engine.DomainError("source_sink", file)
+		return engine.DomainError(engine.ValidDomainSourceSink, file, env)
 	default:
-		return engine.TypeError("atom", file)
+		return engine.TypeError(engine.ValidTypeAtom, file, env)
 	}
 }

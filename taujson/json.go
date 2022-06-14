@@ -42,14 +42,14 @@ func JSONAtom(js, atom engine.Term, k func(*engine.Env) *engine.Promise, env *en
 		raw = js
 	case engine.Variable:
 	default:
-		return engine.Error(typeErrorJS(js))
+		return engine.Error(engine.TypeError(engine.ValidTypeList, js, env))
 	}
 
 	return engine.Delay(func(context.Context) *engine.Promise {
 		switch atom := env.Resolve(atom).(type) {
 		case engine.Variable:
 			if raw == nil {
-				return engine.Error(engine.ErrInstantiation)
+				return engine.Error(engine.InstantiationError(env))
 			}
 			t := engine.Atom(*raw)
 			return engine.Unify(atom, t, k, env)
@@ -63,7 +63,7 @@ func JSONAtom(js, atom engine.Term, k func(*engine.Env) *engine.Promise, env *en
 			}
 			return k(env)
 		default:
-			return engine.Error(engine.TypeErrorAtom(atom))
+			return engine.Error(engine.TypeError(engine.ValidTypeAtom, atom, env))
 		}
 	})
 }
@@ -80,7 +80,7 @@ func JSONProlog(js, value engine.Term, k func(*engine.Env) *engine.Promise, env 
 		raw = js
 	case engine.Variable:
 	default:
-		return engine.Error(typeErrorJS(js))
+		return engine.Error(engine.TypeError(engine.ValidTypeList, js, env))
 	}
 
 	return engine.Delay(func(context.Context) *engine.Promise {
@@ -89,7 +89,7 @@ func JSONProlog(js, value engine.Term, k func(*engine.Env) *engine.Promise, env 
 		switch value := value.(type) {
 		case engine.Variable:
 			if raw == nil {
-				return engine.Error(engine.ErrInstantiation)
+				return engine.Error(engine.InstantiationError(env))
 			}
 			t, err := json2prolog([]byte(*raw))
 			if err != nil {
@@ -98,15 +98,15 @@ func JSONProlog(js, value engine.Term, k func(*engine.Env) *engine.Promise, env 
 			return engine.Unify(value, t, k, env)
 		case engine.Atom:
 			if value != "[]" {
-				return engine.Error(engine.TypeErrorList(value))
+				return engine.Error(engine.TypeError(engine.ValidTypeList, value, env))
 			}
 		case *engine.Compound:
 			// Tau only accepts lists?
 			if value.Functor != "." || len(value.Args) != 2 {
-				return engine.Error(engine.TypeErrorList(value))
+				return engine.Error(engine.TypeError(engine.ValidTypeList, value, env))
 			}
 		default:
-			return engine.Error(engine.TypeErrorList(value))
+			return engine.Error(engine.TypeError(engine.ValidTypeList, value, env))
 		}
 
 		enc, err := prolog2json(value, env)
@@ -137,7 +137,7 @@ func (js *Term) Unify(t engine.Term, occursCheck bool, env *engine.Env) (*engine
 
 // Unparse emits engine.tokens that represent the native JS object.
 func (js *Term) Unparse(emit func(engine.Token), _ *engine.Env, _ ...engine.WriteOption) {
-	emit(engine.Token{Kind: engine.TokenIdent, Val: fmt.Sprintf("<js>(%p)", js)}) // TODO: special engine.token kind?
+	emit(engine.Token{Kind: engine.TokenGraphic, Val: fmt.Sprintf("<js>(%p)", js)})
 }
 
 // Compare compares the native JS object to another term.
@@ -156,7 +156,7 @@ func (js *Term) Compare(t engine.Term, env *engine.Env) int64 {
 func prolog2json(t engine.Term, env *engine.Env) ([]byte, error) {
 	switch t := env.Resolve(t).(type) {
 	case engine.Variable:
-		return nil, engine.ErrInstantiation
+		return nil, engine.InstantiationError(env)
 	case engine.Atom:
 		if t == "[]" {
 			return []byte("[]"), nil
@@ -274,8 +274,4 @@ func iface2prolog(v any) engine.Term {
 	}
 
 	panic(fmt.Errorf("unhandled iface: %T", v))
-}
-
-func typeErrorJS(culprit engine.Term) *engine.Exception {
-	return engine.TypeError("js", culprit)
 }

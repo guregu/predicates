@@ -40,14 +40,14 @@ func IsList(t engine.Term, k func(*engine.Env) *engine.Promise, env *engine.Env)
 func AtomicListConcat(list, seperator, atom engine.Term, k func(*engine.Env) *engine.Promise, env *engine.Env) *engine.Promise {
 	sep, ok := seperator.(engine.Atom)
 	if !ok {
-		return engine.Error(engine.TypeErrorAtom(seperator))
+		return engine.Error(engine.TypeError(engine.ValidTypeAtom, seperator, env))
 	}
 
 	switch list := env.Resolve(list).(type) {
 	case engine.Variable:
 		str, ok := env.Resolve(atom).(engine.Atom)
 		if !ok {
-			return engine.Error(engine.ErrInstantiation)
+			return engine.Error(engine.InstantiationError(env))
 		}
 		split := strings.Split(string(str), string(sep))
 		atoms := make([]engine.Term, len(split))
@@ -59,7 +59,7 @@ func AtomicListConcat(list, seperator, atom engine.Term, k func(*engine.Env) *en
 		})
 	case *engine.Compound:
 		if list.Functor != "." || len(list.Args) != 2 {
-			return engine.Error(engine.TypeErrorList(list))
+			return engine.Error(engine.TypeError(engine.ValidTypeList, list, env))
 		}
 		var sb strings.Builder
 		iter := engine.ListIterator{List: list, Env: env}
@@ -67,7 +67,7 @@ func AtomicListConcat(list, seperator, atom engine.Term, k func(*engine.Env) *en
 			cur := env.Resolve(iter.Current())
 			a, ok := cur.(engine.Atom)
 			if !ok {
-				return engine.Error(engine.TypeErrorAtom(a))
+				return engine.Error(engine.TypeError(engine.ValidTypeAtom, a, env))
 			}
 			if i > 0 {
 				sb.WriteString(string(sep))
@@ -80,12 +80,12 @@ func AtomicListConcat(list, seperator, atom engine.Term, k func(*engine.Env) *en
 		})
 	case engine.Atom:
 		if list != "[]" {
-			return engine.Error(engine.TypeErrorList(list))
+			return engine.Error(engine.TypeError(engine.ValidTypeList, list, env))
 		}
 		return engine.Delay(func(context.Context) *engine.Promise {
 			return engine.Unify(atom, engine.Atom(""), k, env)
 		})
 	default:
-		return engine.Error(engine.TypeErrorList(list))
+		return engine.Error(engine.TypeError(engine.ValidTypeList, list, env))
 	}
 }

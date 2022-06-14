@@ -42,18 +42,18 @@ func Value[T Chars](str engine.Term, env *engine.Env) (T, error) {
 		elem := env.Resolve(iter.Current())
 		switch x := elem.(type) {
 		case engine.Variable:
-			return empty, engine.ErrInstantiation
+			return empty, engine.InstantiationError(env)
 		case engine.Atom:
 			char, size := utf8.DecodeRuneInString(string(x))
 			if char == utf8.RuneError ||
 				size == 0 ||
 				size != len(x) {
 				// not a list of single characters
-				return empty, engine.TypeErrorCharacter(x)
+				return empty, engine.TypeError(engine.ValidTypeCharacter, x, env)
 			}
 			sb.WriteRune(char)
 		default:
-			return empty, engine.TypeErrorCharacter(list)
+			return empty, engine.TypeError(engine.ValidTypeCharacter, list, env)
 		}
 	}
 	return T(sb.String()), iter.Err()
@@ -68,7 +68,7 @@ func Values[T Chars](list engine.Term, env *engine.Env) ([]T, error) {
 		elem := env.Resolve(iter.Current())
 		switch x := elem.(type) {
 		case engine.Variable:
-			return nil, engine.ErrInstantiation
+			return nil, engine.InstantiationError(env)
 		case *engine.Compound:
 			v, err := Value[T](x, env)
 			if err != nil {
@@ -76,7 +76,7 @@ func Values[T Chars](list engine.Term, env *engine.Env) ([]T, error) {
 			}
 			vs = append(vs, v)
 		default:
-			return nil, engine.TypeErrorCharacter(list)
+			return nil, engine.TypeError(engine.ValidTypeCharacter, list, env)
 		}
 	}
 	return vs, iter.Err()
