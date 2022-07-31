@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"strconv"
 	"strings"
 
@@ -135,9 +136,15 @@ func (js *Term) Unify(t engine.Term, occursCheck bool, env *engine.Env) (*engine
 	}
 }
 
-// Unparse emits engine.tokens that represent the native JS object.
-func (js *Term) Unparse(emit func(engine.Token), _ *engine.Env, _ ...engine.WriteOption) {
-	emit(engine.Token{Kind: engine.TokenGraphic, Val: fmt.Sprintf("<js>(%p)", js)})
+// WriteTerm writes the Stream to the io.Writer.
+func (js *Term) WriteTerm(w io.Writer, opts *engine.WriteOptions, env *engine.Env) error {
+	c := engine.Compound{
+		Functor: "$json",
+		// Args: []engine.Term{
+		// 	engine.Atom(string(*js)),
+		// },
+	}
+	return c.WriteTerm(w, opts, env)
 }
 
 // Compare compares the native JS object to another term.
@@ -204,7 +211,7 @@ func prolog2json(t engine.Term, env *engine.Env) ([]byte, error) {
 		}
 
 		var sb strings.Builder
-		if err := engine.Write(&sb, t, env); err != nil {
+		if err := t.WriteTerm(&sb, &engine.WriteOptions{}, env); err != nil {
 			return nil, err
 		}
 		return json.Marshal(sb.String())

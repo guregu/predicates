@@ -41,7 +41,7 @@ func TestJSON(t *testing.T) {
 
 		t.Run("value is empty list", p.Expect([]map[string]engine.Term{
 			{"X": engine.Atom("[]")},
-		}, `json_atom(_JS, '[]'), json_prolog(_JS, X).`))
+		}, `json_atom(_JS, []), json_prolog(_JS, X).`))
 
 		t.Run("value is map", p.Expect([]map[string]engine.Term{
 			{"X": engine.List(engine.Atom("-").Apply(engine.Atom("a"), engine.Integer(1)))},

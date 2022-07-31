@@ -36,6 +36,7 @@ func (p *TestProlog) Expect(want []map[string]engine.Term, query string, args ..
 	return func(t *testing.T) {
 		t.Helper()
 
+		t.Logf("query: %s", query)
 		sol, err := p.Query(query)
 		if err != nil {
 			panic(err)
