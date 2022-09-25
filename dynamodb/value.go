@@ -44,7 +44,7 @@ func av2prolog(av *dynamodb.AttributeValue) engine.Term {
 			item := engine.Atom("-").Apply(engine.Atom(k), av2prolog(v))
 			list = append(list, item)
 		}
-		sortTerms(list)
+		sortTerms(list, nil)
 		return engine.Atom("m").Apply(engine.List(list...))
 	case av.N != nil:
 		return engine.Atom("n").Apply(engine.Atom(*av.N))
@@ -68,27 +68,27 @@ func av2prolog(av *dynamodb.AttributeValue) engine.Term {
 	return nil
 }
 
-func sortTerms(list []engine.Term) {
+func sortTerms(list []engine.Term, env *engine.Env) {
 	sort.Slice(list, func(i, j int) bool {
-		return list[i].Compare(list[j], nil) < 0
+		return env.Compare(list[i], list[j]) < 0
 	})
 }
 
 func item2prolog(item map[string]*dynamodb.AttributeValue) engine.Term {
-	t := av2prolog(&dynamodb.AttributeValue{M: item}).(*engine.Compound)
-	return t.Args[0]
+	t := av2prolog(&dynamodb.AttributeValue{M: item}).(engine.Compound)
+	return t.Arg(0)
 }
 
 func splitkey(t engine.Term, env *engine.Env) (key string, value engine.Term, err error) {
 	switch t := env.Resolve(t).(type) {
 	case engine.Variable:
 		return "", nil, engine.InstantiationError(env)
-	case *engine.Compound:
-		if t.Functor != "-" || len(t.Args) != 2 {
+	case engine.Compound:
+		if t.Functor() != "-" || t.Arity() != 2 {
 			return "", nil, engine.TypeError(engine.ValidTypePair, t, env)
 		}
 
-		switch keyArg := env.Resolve(t.Args[0]).(type) {
+		switch keyArg := env.Resolve(t.Arg(0)).(type) {
 		case engine.Atom:
 			key = string(keyArg)
 		case engine.Variable:
@@ -97,7 +97,7 @@ func splitkey(t engine.Term, env *engine.Env) (key string, value engine.Term, er
 			return "", nil, engine.TypeError(engine.ValidTypeAtom, keyArg, env)
 		}
 
-		return key, t.Args[1], nil
+		return key, t.Arg(1), nil
 	}
 	return "", nil, engine.TypeError(engine.ValidTypePair, t, env)
 }
@@ -152,14 +152,16 @@ func splitkeys(t engine.Term, env *engine.Env) (pk, rk engine.Term, err error) {
 	switch t := env.Resolve(t).(type) {
 	case engine.Variable:
 		return nil, nil, engine.InstantiationError(env)
-	case *engine.Compound:
+	case engine.Compound:
+		functor := t.Functor()
+		arity := t.Arity()
 		switch {
-		case t.Functor == "-" && len(t.Args) == 2:
+		case functor == "-" && arity == 2:
 			return t, nil, nil
-		case t.Functor == "-&-" && len(t.Args) == 2:
-			return t.Args[0], t.Args[1], nil
-		case t.Functor == "key" && len(t.Args) == 2:
-			return t.Args[0], t.Args[1], nil
+		case functor == "-&-" && arity == 2:
+			return t.Arg(0), t.Arg(1), nil
+		case functor == "key" && arity == 2:
+			return t.Arg(0), t.Arg(1), nil
 		}
 
 		// TODO: better error
@@ -190,9 +192,9 @@ func prolog2av(v engine.Term, env *engine.Env) (*dynamodb.AttributeValue, error)
 		return &dynamodb.AttributeValue{N: aws.String(string(strconv.FormatInt(int64(v), 10)))}, nil
 	case engine.Float:
 		return &dynamodb.AttributeValue{N: aws.String(string(strconv.FormatFloat(float64(v), 'f', -1, 64)))}, nil
-	case *engine.Compound:
-		arg := env.Resolve(v.Args[0])
-		switch v.Functor {
+	case engine.Compound:
+		arg := env.Resolve(v.Arg(0))
+		switch v.Functor() {
 		case "b":
 			if a, ok := arg.(engine.Atom); ok {
 				b, err := base64.StdEncoding.DecodeString(string(a))
@@ -339,9 +341,9 @@ func simplify(v engine.Term, env *engine.Env) (engine.Term, error) {
 		return v, nil
 	case engine.Float:
 		return v, nil
-	case *engine.Compound:
-		arg := env.Resolve(v.Args[0])
-		switch v.Functor {
+	case engine.Compound:
+		arg := env.Resolve(v.Arg(0))
+		switch v.Functor() {
 		case "l":
 			list := make([]engine.Term, 0)
 			iter := engine.ListIterator{List: arg, Env: env}

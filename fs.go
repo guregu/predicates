@@ -52,7 +52,7 @@ func (ff FS) DirectoryFiles(directory, files engine.Term, k func(*engine.Env) *e
 	switch directory := env.Resolve(directory).(type) {
 	case engine.Variable:
 		return engine.Error(engine.InstantiationError(env))
-	case *engine.Compound:
+	case engine.Compound:
 		var err error
 		dir, err = chars.Value[string](directory, env)
 		if err != nil {
@@ -94,7 +94,7 @@ func (ff FS) DirectoryExists(directory engine.Term, k func(*engine.Env) *engine.
 	switch directory := env.Resolve(directory).(type) {
 	case engine.Variable:
 		return engine.Error(engine.InstantiationError(env))
-	case *engine.Compound:
+	case engine.Compound:
 		var err error
 		dir, err = chars.Value[string](directory, env)
 		if err != nil {
@@ -127,7 +127,7 @@ func (ff FS) FileExists(file engine.Term, k func(*engine.Env) *engine.Promise, e
 	switch file := env.Resolve(file).(type) {
 	case engine.Variable:
 		return engine.Error(engine.InstantiationError(env))
-	case *engine.Compound:
+	case engine.Compound:
 		var err error
 		f, err = chars.Value[string](file, env)
 		if err != nil {
@@ -162,8 +162,8 @@ func (ff FS) Consult(files engine.Term, k func(*engine.Env) *engine.Promise, env
 	switch f := env.Resolve(files).(type) {
 	case engine.Variable:
 		return engine.Error(engine.InstantiationError(env))
-	case *engine.Compound:
-		if f.Functor == "." && len(f.Args) == 2 {
+	case engine.Compound:
+		if f.Functor() == "." && f.Arity() == 2 {
 			iter := engine.ListIterator{List: f, Env: env}
 			for iter.Next() {
 				if err := ff.consultOne(iter.Current(), env); err != nil {

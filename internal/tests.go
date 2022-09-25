@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"bytes"
 	"os"
 	"testing"
 
@@ -71,10 +72,27 @@ func (p *TestProlog) Expect(want []map[string]engine.Term, query string, args ..
 			t.Log("want", len(want), "solutions but got", n)
 		}
 
-		if diff := cmp.Diff(want, got); diff != "" {
+		if diff := cmp.Diff(want, got, cmpTerm()); diff != "" {
 			t.Error("output mismatch (-want +got):\n", diff)
 		}
 	}
+}
+
+func cmpTerm() cmp.Option {
+	return cmp.FilterValues(func(x, y interface{}) bool {
+		_, ok1 := x.(engine.Term)
+		_, ok2 := y.(engine.Term)
+		return ok1 && ok2
+	}, cmp.Comparer(func(x, y interface{}) bool {
+		t1 := x.(engine.Term)
+		t2 := y.(engine.Term)
+
+		var b1, b2 bytes.Buffer
+		engine.WriteTerm(&b1, t1, &engine.WriteOptions{Quoted: true}, nil)
+		engine.WriteTerm(&b2, t2, &engine.WriteOptions{Quoted: true}, nil)
+
+		return b1.String() == b2.String()
+	}))
 }
 
 // predefined test results

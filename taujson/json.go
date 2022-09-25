@@ -9,13 +9,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"strconv"
 	"strings"
 
 	"github.com/ichiban/prolog"
 	"github.com/ichiban/prolog/engine"
 
+	"github.com/guregu/predicates/chars"
 	"github.com/guregu/predicates/internal"
 )
 
@@ -37,9 +37,10 @@ func Register(p *prolog.Interpreter) {
 //	json_atom(-JS, +Atom).
 //	json_atom(+JS, -Atom).
 func JSONAtom(js, atom engine.Term, k func(*engine.Env) *engine.Promise, env *engine.Env) *engine.Promise {
-	var raw *Term
+	var raw engine.Compound
+
 	switch js := env.Resolve(js).(type) {
-	case *Term:
+	case engine.Compound:
 		raw = js
 	case engine.Variable:
 	default:
@@ -47,19 +48,24 @@ func JSONAtom(js, atom engine.Term, k func(*engine.Env) *engine.Promise, env *en
 	}
 
 	return engine.Delay(func(context.Context) *engine.Promise {
+		str, err := jsonOf(raw, env)
+		if err != nil {
+			return engine.Error(err)
+		}
+
 		switch atom := env.Resolve(atom).(type) {
 		case engine.Variable:
 			if raw == nil {
 				return engine.Error(engine.InstantiationError(env))
 			}
-			t := engine.Atom(*raw)
+			t := engine.Atom(str)
 			return engine.Unify(atom, t, k, env)
 		case engine.Atom:
 			if raw == nil {
-				t := Term(atom)
-				return engine.Unify(js, &t, k, env)
+				t := engine.CharList(string(atom))
+				return engine.Unify(js, t, k, env)
 			}
-			if engine.Atom(*raw) != atom {
+			if engine.Atom(str) != atom {
 				return engine.Bool(false)
 			}
 			return k(env)
@@ -75,9 +81,9 @@ func JSONAtom(js, atom engine.Term, k func(*engine.Env) *engine.Promise, env *en
 //	json_prolog(-JS, +List).
 //	json_prolog(+JS, -List).
 func JSONProlog(js, value engine.Term, k func(*engine.Env) *engine.Promise, env *engine.Env) *engine.Promise {
-	var raw *Term
+	var raw engine.Compound
 	switch js := env.Resolve(js).(type) {
-	case *Term:
+	case engine.Compound:
 		raw = js
 	case engine.Variable:
 	default:
@@ -87,12 +93,17 @@ func JSONProlog(js, value engine.Term, k func(*engine.Env) *engine.Promise, env 
 	return engine.Delay(func(context.Context) *engine.Promise {
 		value := env.Resolve(value)
 
+		str, err := jsonOf(raw, env)
+		if err != nil {
+			return engine.Error(err)
+		}
+
 		switch value := value.(type) {
 		case engine.Variable:
 			if raw == nil {
 				return engine.Error(engine.InstantiationError(env))
 			}
-			t, err := json2prolog([]byte(*raw))
+			t, err := json2prolog([]byte(str))
 			if err != nil {
 				return engine.Error(err)
 			}
@@ -101,9 +112,9 @@ func JSONProlog(js, value engine.Term, k func(*engine.Env) *engine.Promise, env 
 			if value != "[]" {
 				return engine.Error(engine.TypeError(engine.ValidTypeList, value, env))
 			}
-		case *engine.Compound:
+		case engine.Compound:
 			// Tau only accepts lists?
-			if value.Functor != "." || len(value.Args) != 2 {
+			if value.Functor() != "." || value.Arity() != 2 {
 				return engine.Error(engine.TypeError(engine.ValidTypeList, value, env))
 			}
 		default:
@@ -114,51 +125,53 @@ func JSONProlog(js, value engine.Term, k func(*engine.Env) *engine.Promise, env 
 		if err != nil {
 			return engine.Error(err)
 		}
-		jsTerm := Term(enc)
-		return engine.Unify(js, &jsTerm, k, env)
+		jsTerm := engine.CharList(string(enc))
+		return engine.Unify(js, jsTerm, k, env)
 	})
 }
+
+// type Term = engine.Compound
 
 // Term is a native representation of JSON.
 // This is intended to match behavior with Tau Prolog.
 // Proper JSON predicates coming soon! 😇
-type Term json.RawMessage
+// type Term json.RawMessage
 
-// Unify unifies the native JS object with t.
-func (js *Term) Unify(t engine.Term, occursCheck bool, env *engine.Env) (*engine.Env, bool) {
-	switch t := env.Resolve(t).(type) {
-	case *Term:
-		return env, bytes.Equal(*js, *t)
-	case engine.Variable:
-		return t.Unify(js, occursCheck, env)
-	default:
-		return env, false
-	}
-}
+// // Unify unifies the native JS object with t.
+// func (js *Term) Unify(t engine.Term, occursCheck bool, env *engine.Env) (*engine.Env, bool) {
+// 	switch t := env.Resolve(t).(type) {
+// 	case *Term:
+// 		return env, bytes.Equal(*js, *t)
+// 	case engine.Variable:
+// 		return t.Unify(js, occursCheck, env)
+// 	default:
+// 		return env, false
+// 	}
+// }
 
-// WriteTerm writes the Stream to the io.Writer.
-func (js *Term) WriteTerm(w io.Writer, opts *engine.WriteOptions, env *engine.Env) error {
-	c := engine.Compound{
-		Functor: "$json",
-		// Args: []engine.Term{
-		// 	engine.Atom(string(*js)),
-		// },
-	}
-	return c.WriteTerm(w, opts, env)
-}
+// // WriteTerm writes the Stream to the io.Writer.
+// func (js *Term) WriteTerm(w io.Writer, opts *engine.WriteOptions, env *engine.Env) error {
+// 	c := engine.Compound{
+// 		Functor: "$json",
+// 		// Args: []engine.Term{
+// 		// 	engine.Atom(string(*js)),
+// 		// },
+// 	}
+// 	return c.WriteTerm(w, opts, env)
+// }
 
-// Compare compares the native JS object to another term.
-func (js *Term) Compare(t engine.Term, env *engine.Env) int64 {
-	switch t := env.Resolve(t).(type) {
-	case *Term:
-		if js == t {
-			return 0
-		}
-		return 1
-	default:
-		return 1
-	}
-}
+// // Compare compares the native JS object to another term.
+// func (js *Term) Compare(t engine.Term, env *engine.Env) int64 {
+// 	switch t := env.Resolve(t).(type) {
+// 	case *Term:
+// 		if js == t {
+// 			return 0
+// 		}
+// 		return 1
+// 	default:
+// 		return 1
+// 	}
+// }
 
 func prolog2json(t engine.Term, env *engine.Env) ([]byte, error) {
 	switch t := env.Resolve(t).(type) {
@@ -173,15 +186,15 @@ func prolog2json(t engine.Term, env *engine.Env) ([]byte, error) {
 		return json.Marshal(int64(t))
 	case engine.Float:
 		return json.Marshal(float64(t))
-	case *engine.Compound:
+	case engine.Compound:
 		if internal.IsMap(t, env) {
 			m := make(map[string]json.RawMessage)
 			iter := engine.ListIterator{List: t, Env: env}
 			for iter.Next() {
 				cur := env.Resolve(iter.Current())
-				cmp := cur.(*engine.Compound)
-				k := string(env.Resolve(cmp.Args[0]).(engine.Atom))
-				v, err := prolog2json(env.Resolve(cmp.Args[1]), env)
+				cmp := cur.(engine.Compound)
+				k := string(env.Resolve(cmp.Arg(0)).(engine.Atom))
+				v, err := prolog2json(env.Resolve(cmp.Arg(1)), env)
 				if err != nil {
 					return nil, err
 				}
@@ -193,7 +206,7 @@ func prolog2json(t engine.Term, env *engine.Env) ([]byte, error) {
 			return json.Marshal(m)
 		}
 
-		if t.Functor == "." && len(t.Args) == 2 {
+		if t.Functor() == "." && t.Arity() == 2 {
 			list := make([]json.RawMessage, 0)
 			iter := engine.ListIterator{List: t, Env: env}
 			for iter.Next() {
@@ -211,12 +224,10 @@ func prolog2json(t engine.Term, env *engine.Env) ([]byte, error) {
 		}
 
 		var sb strings.Builder
-		if err := t.WriteTerm(&sb, &engine.WriteOptions{}, env); err != nil {
+		if err := engine.WriteTerm(&sb, t, &engine.WriteOptions{}, env); err != nil {
 			return nil, err
 		}
 		return json.Marshal(sb.String())
-	case *Term:
-		return []byte(*t), nil
 	}
 	return nil, nil
 }
@@ -281,4 +292,11 @@ func iface2prolog(v any) engine.Term {
 	}
 
 	panic(fmt.Errorf("unhandled iface: %T", v))
+}
+
+func jsonOf(t engine.Term, env *engine.Env) (string, error) {
+	if t == nil {
+		return "", nil
+	}
+	return chars.Value[string](t, env)
 }

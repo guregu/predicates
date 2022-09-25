@@ -19,7 +19,7 @@ func IsList(t engine.Term, k func(*engine.Env) *engine.Promise, env *engine.Env)
 			return engine.Bool(false)
 		}
 		return k(env)
-	case *engine.Compound:
+	case engine.Compound:
 		iter := engine.ListIterator{List: t, Env: env}
 		for iter.Next() {
 		}
@@ -57,8 +57,8 @@ func AtomicListConcat(list, seperator, atom engine.Term, k func(*engine.Env) *en
 		return engine.Delay(func(context.Context) *engine.Promise {
 			return engine.Unify(list, engine.List(atoms...), k, env)
 		})
-	case *engine.Compound:
-		if list.Functor != "." || len(list.Args) != 2 {
+	case engine.Compound:
+		if list.Functor() != "." || list.Arity() != 2 {
 			return engine.Error(engine.TypeError(engine.ValidTypeList, list, env))
 		}
 		var sb strings.Builder

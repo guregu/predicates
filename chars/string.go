@@ -69,7 +69,7 @@ func Values[T Chars](list engine.Term, env *engine.Env) ([]T, error) {
 		switch x := elem.(type) {
 		case engine.Variable:
 			return nil, engine.InstantiationError(env)
-		case *engine.Compound:
+		case engine.Compound:
 			v, err := Value[T](x, env)
 			if err != nil {
 				return nil, err
